@@ -1,7 +1,7 @@
 from classifier import Classifier
 from newsapi import NewsApiClient
 
-categories = ['business     ', 'entertainment', 'health       ', 'tech science ', 'environment  ']
+categories = ['business', 'entertainment', 'health', 'tech science', 'environment', 'lgbt', 'youth']
 
 def main():
     model = Classifier()
@@ -13,7 +13,7 @@ def main():
     for article in response['articles']:
         headline = article['title']
         cat = model.predict(headline)
-        print(categories[cat], ' | ', headline)
+        print('{0:<13} | {1}'.format(categories[cat], headline))
 
 if __name__ == '__main__':
     main()
