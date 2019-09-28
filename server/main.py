@@ -1,7 +1,7 @@
 from classifier import Classifier
 from newsapi import NewsApiClient
 
-categories = ['business     ', 'entertainment', 'health       ', 'tech science ']
+categories = ['business     ', 'entertainment', 'health       ', 'tech science ', 'environment  ']
 
 def main():
     model = Classifier()
