@@ -10,7 +10,6 @@ def normalize_text(s):
     
     return s
 
-
 class Classifier:
     def __init__(self, model_filename='model/nb.model', vectoriser_filename='model/nb.vectorizer'):
         self.model = pickle.load(open(model_filename, 'rb'))

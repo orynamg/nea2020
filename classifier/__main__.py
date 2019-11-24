@@ -13,6 +13,7 @@ def main():
     for article in response['articles']:
         headline = article['title']
         cat = model.predict(headline)
+        
         print('{0:<13} | {1}'.format(categories[cat], headline))
 
 if __name__ == '__main__':
