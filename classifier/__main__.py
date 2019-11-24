@@ -8,7 +8,7 @@ def main():
     #print(model.predict('Apple arcade goes live for iOS 13 beta testers - The Verge'))
     
     newsapi = NewsApiClient(api_key='16b987ce39464b8296c81b36bc541075')
-    response = newsapi.get_top_headlines(language='en', country='us')
+    response = newsapi.get_top_headlines(language='en', country='gb')
 
     for article in response['articles']:
         headline = article['title']
