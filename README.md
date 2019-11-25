@@ -3,3 +3,8 @@
 
 # INSERT NAME HERE
 Uses APIs to filter, summarise and categorise news stories from multiple news outlets and twitter.
+
+# List of things to do
+|Item|Description|Status|
+|:---|:----------|:-----|
+|Thing|Descritption of said thing|Not Started/Need To Do/In Progress/Done|
