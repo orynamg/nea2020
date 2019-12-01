@@ -1,13 +1,13 @@
+import os
 import sqlite3
+import time
+from datetime import datetime
 from napp.database import create_database, insert_news, check_headline
 from napp.news_loader.news import NewsLoader
-import schedule
-from datetime import datetime
-import time
 
 def main():
     conn = sqlite3.connect('database/napp.db')
-    newsloader = NewsLoader('16b987ce39464b8296c81b36bc541075')
+    newsloader = NewsLoader(os.environ['NEWSAPI_KEY'])
 
     with conn:
         create_database(conn)
@@ -15,6 +15,7 @@ def main():
 
         while True:
             load_news(conn, newsloader, country_code)
+            conn.commit()
             time.sleep(10)
 
 
@@ -28,7 +29,7 @@ def load_news(conn, newsloader, country_code):
         url = article.url
         if check_headline(conn, headline) == 0:
             news_id = insert_news(conn, headline, source, url, country_code)
-            print(news_id)
+            print(news_id, source, headline)
 
 
 if __name__ == "__main__":

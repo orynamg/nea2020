@@ -27,14 +27,18 @@ def get_tweets(api, keyword):
 
 
 def main():
-    auth = BearerTokenAuth(
-                consumer_key="SFkahJJkOcC5rAwcrqQq6cynl", 
-                consumer_secret="WkVQVWVE09tfIIk6eFon5lfxyGF5llguooZz8JPq9ZQiWgELWj")
 
-    api = twitter.Api(consumer_key="SFkahJJkOcC5rAwcrqQq6cynl",
-                  consumer_secret="WkVQVWVE09tfIIk6eFon5lfxyGF5llguooZz8JPq9ZQiWgELWj",
-                  access_token_key="2752888857-DgQSdhXKDCH4NWynUMmIW9DAcohjflgmvKEQnI4",
-                  access_token_secret="sqJ798LQWtgC51HaTxLdcD1RxqgWrxRebN5ikeMqDjQRE")
+    consumer_key = os.environ['TWITTER_CONSUMER_KEY']
+    consumer_secret = os.environ['TWITTER_CONSUMER_SECRET']
+    access_token = os.environ['TWITTER_ACCESS_TOKEN']
+    access_token_secret = os.environ['TWITTER_ACCESS_TOKEN_SECRET']
+
+    auth = BearerTokenAuth(consumer_key=consumer_key, consumer_secret=consumer_secret)
+
+    api = twitter.Api(consumer_key=consumer_key,
+                  consumer_secret=consumer_secret,
+                  access_token_key=access_token,
+                  access_token_secret=access_token_secret)
 
     for trend in get_trends(auth, "gb"):
         tweets = get_tweets(api, trend)
