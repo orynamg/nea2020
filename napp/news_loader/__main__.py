@@ -1,6 +1,6 @@
 import sqlite3
-from database import create_database, insert_news, check_headline
-from news import NewsLoader
+from napp.database import create_database, insert_news, check_headline
+from napp.news_loader.news import NewsLoader
 import schedule
 from datetime import datetime
 import time

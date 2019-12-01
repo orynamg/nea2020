@@ -107,3 +107,6 @@ venv.bak/
 
 notebooks/*.model
 notebooks/*.vectorizer
+
+database/
+temp/ 

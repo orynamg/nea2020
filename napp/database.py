@@ -38,12 +38,12 @@ def create_database(conn):
         TweetID INTEGER PRIMARY KEY AUTOINCREMENT,
         Tweet VARCHAR NOT NULL,
         Hashtag VARCHAR NOT NULL, 
-        URL VARCHAR NOT NULL,
+        URL VARCHAR,
         User VARCHAR NOT NULL,
         CategoryID INTEGER, 
         EventID INTEGER,
         PublishedAt TIMESTAMP NOT NULL,
-        CreatedAT TIMESTAMP DEFUALT CURRENT_TIMESTAMP,
+        CreatedAt TIMESTAMP DEFUALT CURRENT_TIMESTAMP,
         FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
         FOREIGN KEY(EventID) REFERENCES Event(EventID)
     );
