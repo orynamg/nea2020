@@ -70,3 +70,17 @@ def check_headline(conn, headline):
     result = cur.fetchone()[0]
     return result
 
+
+def get_news(conn):
+    c = conn.cursor()
+    for row in c.execute('SELECT * FROM News'):
+        yield row
+
+
+def insert_tweet(conn, text, hashtags, url, author, published_at):
+    sql = """ INSERT INTO Tweet(Tweet, Hashtag, URL, User, PublishedAt)
+              VALUES(?,?,?,?,?); """
+
+    cur = conn.cursor()
+    cur.execute(sql, (text, hashtags, url, author, published_at))
+    return cur.lastrowid

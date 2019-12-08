@@ -1,6 +1,8 @@
 import os
+import sqlite3
 import twitter
-from napp.database import create_database
+from datetime import datetime
+from napp.database import create_database, insert_tweet
 
 
 def get_tweets(api, keyword):
@@ -9,7 +11,15 @@ def get_tweets(api, keyword):
     return results
 
 
+def save_tweet(conn, tweet):
+    hashtags = ','.join(h.text for h in tweet.hashtags)
+    url = tweet.urls[0].url if tweet.urls else None 
+    published_at = datetime.fromtimestamp(tweet.created_at_in_seconds)
+    return insert_tweet(conn, tweet.text, hashtags, url, tweet.user.screen_name, published_at)
+
 def main():
+    conn = sqlite3.connect('database/napp.db')
+
     consumer_key = os.environ['TWITTER_CONSUMER_KEY']
     consumer_secret = os.environ['TWITTER_CONSUMER_SECRET']
     access_token = os.environ['TWITTER_ACCESS_TOKEN']
@@ -25,13 +35,21 @@ def main():
         "US": 23424977
     }
 
-    trends = api.GetTrendsWoeid(woeids["GB"])
+    with conn:
+        create_database(conn)
 
-    for trend in trends:
-        tweets = get_tweets(api, trend.query)
-        for tweet in tweets:
-            print(trend.name, tweet.text[:80])
+        trends = api.GetTrendsWoeid(woeids["GB"])
+
+        for trend in trends:
+            tweets = get_tweets(api, trend.query)
+            for tweet in tweets:
+                tweet_db_id = save_tweet(conn, tweet)
+                print(trend.name, tweet_db_id, tweet.text[:80])
+            break
 
 
 if __name__ == "__main__":
-    main()
+   try:
+       main()
+   except KeyboardInterrupt:
+        print(' Exiting...')
