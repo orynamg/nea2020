@@ -2,7 +2,7 @@ import os
 import sqlite3
 import twitter
 from datetime import datetime
-from napp.database import create_database, insert_tweet
+from database import create_database, insert_tweet
 
 
 def get_tweets(api, keyword):
@@ -16,6 +16,7 @@ def save_tweet(conn, tweet):
     url = tweet.urls[0].url if tweet.urls else None 
     published_at = datetime.fromtimestamp(tweet.created_at_in_seconds)
     return insert_tweet(conn, tweet.text, hashtags, url, tweet.user.screen_name, published_at)
+
 
 def main():
     conn = sqlite3.connect('database/napp.db')
@@ -41,6 +42,8 @@ def main():
         trends = api.GetTrendsWoeid(woeids["GB"])
 
         for trend in trends:
+            # print(trend)
+            # continue
             tweets = get_tweets(api, trend.query)
             for tweet in tweets:
                 tweet_db_id = save_tweet(conn, tweet)

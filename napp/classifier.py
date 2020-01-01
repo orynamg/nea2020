@@ -1,6 +1,8 @@
+import os
 import pickle
 import csv
 import re
+from newsapi import NewsApiClient
 
 def normalize_text(s):
     s = s.lower()
@@ -53,3 +55,20 @@ class Classifier:
         return False 
             
 
+def main():
+    categories = ['business', 'entertainment', 'health', 'tech&science', 'environment', 'lgbt', 'youth']
+    model = Classifier()
+    #print(model.predict('Apple arcade goes live for iOS 13 beta testers - The Verge'))
+    
+    newsapi = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
+    response = newsapi.get_top_headlines(language='en', country='gb')
+
+    for article in response['articles']:
+        headline = article['title']
+        cat = model.predict(headline)
+        
+        print('{0:<13} | {1}'.format(categories[cat], headline))
+
+
+if __name__ == '__main__':
+    main()
