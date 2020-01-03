@@ -2,6 +2,7 @@ import os
 import pickle
 import csv
 import re
+import spacy
 from newsapi import NewsApiClient
 
 Categories = ['business', 'entertainment', 'health', 'tech & science', 'environment', 'lgbt', 'youth']
@@ -21,6 +22,7 @@ class Classifier:
         self.env_terms = self.load_terms('model/env_terms.csv', lambda row: row[1])
         self.lgbt_terms = self.load_terms('model/lgbt_terms.csv', lambda row: row[0])
         self.youth_terms = self.load_terms('model/youth_terms.csv', lambda row: row[0])
+        self.nlp = spacy.load("en_core_web_sm")
 
     def load_terms(self, filename, extract):
         terms = set()
@@ -55,7 +57,11 @@ class Classifier:
             if word in terms:
                 return True
         return False 
-            
+    
+    def get_named_entities(self, text):
+        doc = self.nlp(text)
+        return set(ent.text.lower() for ent in doc.ents 
+            if ent.label_ not in ['DATE','TIME','PERCENT','MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'])
 
 def main():
     model = Classifier()

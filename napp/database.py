@@ -1,5 +1,7 @@
 import sqlite3
 from classifier import Categories
+from models import *
+
 
 def create_database(conn):
     create_category_table = """
@@ -11,8 +13,9 @@ def create_database(conn):
     create_event_table = """
     CREATE TABLE IF NOT EXISTS Event(
         EventID INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name VARCHAR NOT NULL,
+        Name VARCHAR NOT NULL UNIQUE,
         Summary VARCHAR,
+        Keywords VARCHAR,
         CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """
@@ -37,10 +40,10 @@ def create_database(conn):
     create_tweet_table = """
     CREATE TABLE IF NOT EXISTS Tweet(
         TweetID INTEGER PRIMARY KEY AUTOINCREMENT,
-        Tweet VARCHAR NOT NULL,
-        Hashtag VARCHAR NOT NULL, 
-        URL VARCHAR,
+        Text VARCHAR NOT NULL,
+        Hashtags VARCHAR NOT NULL,
         User VARCHAR NOT NULL,
+        URL VARCHAR,
         CategoryID INTEGER, 
         EventID INTEGER,
         PublishedAt TIMESTAMP NOT NULL,
@@ -69,6 +72,7 @@ def insert_news(conn, headline, source, url, coutry_code):
 
     return cur.lastrowid
 
+
 def check_headline(conn, headline):
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM News WHERE headline=?", (headline,))
@@ -83,10 +87,43 @@ def get_news(conn):
         yield row
 
 
-def insert_tweet(conn, tweet_id, text, hashtags, url, author, published_at):
-    sql = """ INSERT INTO Tweet(TweetID, Tweet, Hashtags, URL, User, PublishedAt)
-              VALUES(?,?,?,?,?,?) ON CONFLICT DO NOTHING; """
+def save_tweet(conn, tweet):
+    sql = """ INSERT OR REPLACE INTO Tweet(TweetID, Text, Hashtags, User, URL, CategoryID, EventID, PublishedAt)
+              VALUES(?,?,?,?,?,?,?,?); """
 
     cur = conn.cursor()
-    cur.execute(sql, (tweet_id, text, hashtags, url, author, published_at))
-    return cur.lastrowid
+    cur.execute(sql, (tweet.id, tweet.text, tweet.hashtags, tweet.user, tweet.url, 
+                        tweet.category_id, tweet.event_id, tweet.published_at))
+    return tweet
+
+def save_event(conn, event):
+    sql = """ INSERT INTO Event(Name, Summary, Keywords)
+              VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET 
+                Summary=excluded.Summary,
+                Keywords=excluded.Keywords; """
+
+    keywords_text = ','.join(event.keywords)
+
+    cur = conn.cursor()
+    cur.execute(sql, (event.name, event.summary, keywords_text))
+    if cur.rowcount == 1:
+        event.id = cur.lastrowid
+
+    return event
+
+
+def _event_from_row(row):
+    return Event(
+        id = row[0],
+        name = row[1],
+        summary = row[2] if row[2] else '',
+        keywords = set(row[3].split(',')) if row[3] else set(),
+        created_at = row[4]
+    )
+
+
+def find_events_since(conn, start_date):
+    c = conn.cursor()
+    c.execute("SELECT * FROM Event WHERE CreatedAt >= ?", (start_date,))
+    for row in c.fetchall():
+        yield _event_from_row(row)

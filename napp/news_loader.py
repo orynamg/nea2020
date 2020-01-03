@@ -5,6 +5,7 @@ from datetime import datetime
 from newsapi import NewsApiClient
 from attrdict import AttrDict
 from database import create_database, insert_news, check_headline
+import config
 
 
 class NewsLoader:
@@ -32,13 +33,12 @@ def load_news(conn, news_loader, country_code):
 def main():
     conn = sqlite3.connect('database/napp.db')
     news_loader = NewsLoader(os.environ['NEWSAPI_KEY'])
-    country_code = 'gb'
 
     with conn:
         create_database(conn)
 
         while True:
-            load_news(conn, news_loader, country_code)
+            load_news(conn, news_loader, config.country_code)
             conn.commit()
             time.sleep(10)
 
