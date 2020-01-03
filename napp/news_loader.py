@@ -1,48 +1,69 @@
 import os
 import sqlite3
 import time
-from datetime import datetime
-from newsapi import NewsApiClient
-from attrdict import AttrDict
-from database import create_database, insert_news, check_headline
 import config
+from datetime import datetime, date, timedelta
+from newsapi import NewsApiClient
+import database as db
+from models import News, Event
+from classifier import Classifier, Categories
 
 
-class NewsLoader:
-    def __init__(self, api_key):
-        self.newsapi = NewsApiClient(api_key=api_key)
+def news_from_api(api_news):
+    return News(
+        headline = api_news['title'],
+        source = api_news['source']['name'],
+        url = api_news['url']
+    )
 
-    def get_news(self, country):
-        response = self.newsapi.get_top_headlines(language='en', country=country)
-        return AttrDict(response)
+
+def match_event(conn, news, events, classifier):
+    keywords = classifier.get_named_entities(news.headline)
+    event = next((ev for ev in events if keywords.isubset(existing_event.keywords)), None)
+    if event:
+        news.event_id = event.id
+        print(f'{datetime.now()} Exisitng event {event.name} matches news keywords: {keywords}')
 
 
-def load_news(conn, news_loader, country_code):
-    print('{} Loading News...'.format(datetime.now()))
-    response = news_loader.get_news(country_code)
+def load_news(conn, api, classifier):
+    # load news headlines from newsapi.org
+    response = api.get_top_headlines(language='en', country=config.country_code)
+    news_list = [news_from_api(obj) for obj in response['articles']]
+    print(f'{datetime.now()} Loaded {len(news_list)} news headlines')
 
-    for article in response.articles:
-        headline = article.title
-        source = article.source.name
-        url = article.url
-        if check_headline(conn, headline) == 0:
-            news_id = insert_news(conn, headline, source, url, country_code)
-            print(news_id, source, headline)
+    # load recent events from database (added in the lase 3 days)
+    start_date = date.today() - timedelta(days=3)
+    events = list(db.find_events_since(conn, start_date))
+    print(f'{datetime.now()} Loaded {len(events)} existing recent events')
+
+    for news in news_list:
+        news.country_code = config.country_code
+        news.category_id = classifier.predict_category(news.headline)
+        match_event(conn, news, events, classifier)
+
+        if not db.find_news_headline(conn, news.headline):
+            with conn:
+                news = db.save_news(conn, news)
+                print(f'{datetime.now()} {Categories[news.category_id]:<14} {news.id:>4} {news.headline}')
 
 
 def main():
-    conn = sqlite3.connect('database/napp.db')
-    news_loader = NewsLoader(os.environ['NEWSAPI_KEY'])
+    conn = sqlite3.connect('database/napp.db', 
+                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+                
+    api = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
+
+    classifier = Classifier()
 
     with conn:
-        create_database(conn)
+        db.create_database(conn)
 
-        while True:
-            load_news(conn, news_loader, config.country_code)
-            conn.commit()
-            time.sleep(10)
+    while True:
+        load_news(conn, api, classifier)
+        time.sleep(config.news_loader_sleep_sec)
 
-    conn.close()
+    if conn:
+        conn.close()
 
 if __name__ == "__main__":
    try:

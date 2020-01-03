@@ -22,7 +22,7 @@ class Classifier:
         self.env_terms = self.load_terms('model/env_terms.csv', lambda row: row[1])
         self.lgbt_terms = self.load_terms('model/lgbt_terms.csv', lambda row: row[0])
         self.youth_terms = self.load_terms('model/youth_terms.csv', lambda row: row[0])
-        self.nlp = spacy.load("en_core_web_md")
+        self.nlp = spacy.load("en_core_web_sm")
 
     def load_terms(self, filename, extract):
         terms = set()
@@ -33,23 +33,23 @@ class Classifier:
         
         return terms 
 
-    def predict(self, headline):
-        normalised = [normalize_text(headline)]
+    def predict_category(self, text):
+        normalised = [normalize_text(text)]
         x = self.vectoriser.transform(normalised)
         y = self.model.predict(x)
-        if self.match(headline, self.env_terms):
+        if self.match(text, self.env_terms):
             return 4 
-        if self.match(headline, self.lgbt_terms):
+        if self.match(text, self.lgbt_terms):
             return 5 
-        if self.match(headline, self.youth_terms):
+        if self.match(text, self.youth_terms):
             return 6
 
-        return y[0]
+        return int(y[0])
 
-    def match(self, headline, terms):
-        words = normalize_text(headline).split(' ')
-        twograms = [words[i] + " " + words[i+1] for i in range(len(words)-1)]
-        threegrams = [words[i] + " " + words[i+1] + " " + words[i+2] for i in range(len(words)-2)]
+    def match(self, text, terms):
+        words = normalize_text(text).split(' ')
+        twograms = [words[i] + ' ' + words[i+1] for i in range(len(words)-1)]
+        threegrams = [words[i] + ' ' + words[i+1] + ' ' + words[i+2] for i in range(len(words)-2)]
         words.extend(twograms)
         words.extend(threegrams)
     
@@ -64,7 +64,7 @@ class Classifier:
             if ent.label_ not in ['DATE','TIME','PERCENT','MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'])
 
 def main():
-    model = Classifier()
+    classifier = Classifier()
     #print(model.predict('Apple arcade goes live for iOS 13 beta testers - The Verge'))
     
     newsapi = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
@@ -72,11 +72,10 @@ def main():
 
     for article in response['articles']:
         headline = article['title']
-        cat = model.predict(headline)
-
-        keywords = model.get_named_entities(headline)
+        category_id = classifier.predict_category(headline)
+        keywords = classifier.get_named_entities(headline)
         
-        print('{0:<13} | {1}\n{2}\n'.format(Categories[cat], headline, keywords))
+        print('{0:<14} | {1}\n{2}\n'.format(Categories[category_id], headline, keywords))
 
 
 if __name__ == '__main__':

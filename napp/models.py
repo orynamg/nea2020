@@ -21,3 +21,18 @@ class Tweet:
     event_id: Union[int, None] = None
     published_at: datetime = datetime.utcnow()
     created_at: datetime = datetime.utcnow()
+
+
+@dataclass
+class News:
+    id: Union[int, None] = None
+    headline: str = ""
+    source: str = ""
+    url: str = ""
+    country_code: str = ""
+    category_id: Union[int, None] = None
+    event_id: Union[int, None] = None
+    text: str = ""
+    scraped_at: Union[datetime, None] = None
+    created_at: datetime = datetime.utcnow()
+
