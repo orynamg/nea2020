@@ -1,4 +1,5 @@
 import sqlite3
+from classifier import Categories
 
 def create_database(conn):
     create_category_table = """
@@ -53,6 +54,11 @@ def create_database(conn):
     conn.execute(create_news_table)
     conn.execute(create_tweet_table)
 
+    # seed categories
+    conn.executemany(
+        "INSERT INTO Category(CategoryID, Name) values (?, ?) ON CONFLICT DO NOTHING", enumerate(Categories))
+
+
 def insert_news(conn, headline, source, url, coutry_code):
 
     sql = """ INSERT INTO News(Headline, Source, URL, CountryCode)
@@ -77,10 +83,10 @@ def get_news(conn):
         yield row
 
 
-def insert_tweet(conn, text, hashtags, url, author, published_at):
-    sql = """ INSERT INTO Tweet(Tweet, Hashtag, URL, User, PublishedAt)
-              VALUES(?,?,?,?,?); """
+def insert_tweet(conn, tweet_id, text, hashtags, url, author, published_at):
+    sql = """ INSERT INTO Tweet(TweetID, Tweet, Hashtags, URL, User, PublishedAt)
+              VALUES(?,?,?,?,?,?) ON CONFLICT DO NOTHING; """
 
     cur = conn.cursor()
-    cur.execute(sql, (text, hashtags, url, author, published_at))
+    cur.execute(sql, (tweet_id, text, hashtags, url, author, published_at))
     return cur.lastrowid

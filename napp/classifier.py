@@ -4,6 +4,8 @@ import csv
 import re
 from newsapi import NewsApiClient
 
+Categories = ['business', 'entertainment', 'health', 'tech & science', 'environment', 'lgbt', 'youth']
+
 def normalize_text(s):
     s = s.lower()
     s = re.sub(r'\s\W',' ',s)
@@ -56,7 +58,6 @@ class Classifier:
             
 
 def main():
-    categories = ['business', 'entertainment', 'health', 'tech&science', 'environment', 'lgbt', 'youth']
     model = Classifier()
     #print(model.predict('Apple arcade goes live for iOS 13 beta testers - The Verge'))
     
@@ -67,7 +68,7 @@ def main():
         headline = article['title']
         cat = model.predict(headline)
         
-        print('{0:<13} | {1}'.format(categories[cat], headline))
+        print('{0:<13} | {1}'.format(Categories[cat], headline))
 
 
 if __name__ == '__main__':

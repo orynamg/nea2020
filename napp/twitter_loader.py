@@ -15,7 +15,7 @@ def save_tweet(conn, tweet):
     hashtags = ','.join(h.text for h in tweet.hashtags)
     url = tweet.urls[0].url if tweet.urls else None 
     published_at = datetime.fromtimestamp(tweet.created_at_in_seconds)
-    return insert_tweet(conn, tweet.text, hashtags, url, tweet.user.screen_name, published_at)
+    return insert_tweet(conn, tweet.id, tweet.text, hashtags, url, tweet.user.screen_name, published_at)
 
 
 def main():
@@ -42,13 +42,16 @@ def main():
         trends = api.GetTrendsWoeid(woeids["GB"])
 
         for trend in trends:
-            # print(trend)
+            # print(trend.name)
             # continue
             tweets = get_tweets(api, trend.query)
             for tweet in tweets:
+                # print(tweet.id, tweet.text)
                 tweet_db_id = save_tweet(conn, tweet)
                 print(trend.name, tweet_db_id, tweet.text[:80])
             break
+
+    conn.close()
 
 
 if __name__ == "__main__":

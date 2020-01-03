@@ -42,6 +42,7 @@ def main():
             conn.commit()
             time.sleep(10)
 
+    conn.close()
 
 if __name__ == "__main__":
    try:
