@@ -96,6 +96,7 @@ def save_tweet(conn, tweet):
                         tweet.category_id, tweet.event_id, tweet.published_at))
     return tweet
 
+
 def save_event(conn, event):
     sql = """ INSERT INTO Event(Name, Summary, Keywords)
               VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET 
@@ -106,8 +107,12 @@ def save_event(conn, event):
 
     cur = conn.cursor()
     cur.execute(sql, (event.name, event.summary, keywords_text))
-    if cur.rowcount == 1:
-        event.id = cur.lastrowid
+
+    # if not event.id and cur.rowcount == 1:
+    #     event.id = cur.lastrowid
+    for row in conn.execute("SELECT * FROM Event WHERE Name=?", (event.name,)):
+        event.id = row[0]
+        break
 
     return event
 
