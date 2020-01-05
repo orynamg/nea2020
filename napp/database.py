@@ -47,7 +47,7 @@ def create_database(conn):
         CategoryID INTEGER, 
         EventID INTEGER,
         PublishedAt TIMESTAMP NOT NULL,
-        CreatedAt TIMESTAMP DEFUALT CURRENT_TIMESTAMP,
+        CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID),
         FOREIGN KEY(EventID) REFERENCES Event(EventID)
     );
@@ -96,6 +96,21 @@ def find_news_headline(conn, headline):
         return _news_from_row(row)
 
 
+def find_news_by_id(conn, news_id):
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM News WHERE NewsID=?", (news_id,))
+    row = cur.fetchone()
+    if row:
+        return _news_from_row(row)
+
+
+def find_news(conn, limit=10, offset=0):
+    c = conn.cursor()
+    c.execute("SELECT * FROM News ORDER BY CreatedAt DESC LIMIT ? OFFSET ?", (limit, offset))
+    for row in c.fetchall():
+        yield _news_from_row(row)
+
+
 def find_news_since(conn, start_date):
     c = conn.cursor()
     c.execute("SELECT * FROM News WHERE CreatedAt >= ?", (start_date,))
@@ -111,6 +126,34 @@ def save_tweet(conn, tweet):
     cur.execute(sql, (tweet.id, tweet.text, tweet.hashtags, tweet.user, tweet.url, 
                         tweet.category_id, tweet.event_id, tweet.published_at))
     return tweet
+
+
+def _tweet_from_row(row):
+    return Tweet(
+        id = row[0],
+        text = row[1],
+        hashtags = row[2],
+        user = row[3],
+        url = row[4],
+        category_id = row[5], 
+        event_id = row[6],
+        published_at = row[7],
+        created_at = row[8]
+    )
+
+
+def find_tweets(conn, limit=10, offset=0):
+    c = conn.cursor()
+    c.execute("SELECT * FROM Tweet ORDER BY PublishedAt DESC LIMIT ? OFFSET ?", (limit, offset))
+    for row in c.fetchall():
+        yield _tweet_from_row(row)
+
+
+def find_tweets_by_event_id(conn, event_id):
+    c = conn.cursor()
+    c.execute("SELECT * FROM Tweet WHERE EventID = ? ORDER BY PublishedAt DESC", (event_id,))
+    for row in c.fetchall():
+        yield _tweet_from_row(row)
 
 
 def save_event(conn, event):
@@ -141,6 +184,13 @@ def _event_from_row(row):
         keywords = set(row[3].split(',')) if row[3] else set(),
         created_at = row[4]
     )
+
+
+def find_events(conn, limit=10, offset=0):
+    c = conn.cursor()
+    c.execute("SELECT * FROM Event ORDER BY CreatedAt DESC LIMIT ? OFFSET ?", (limit, offset))
+    for row in c.fetchall():
+        yield _event_from_row(row)
 
 
 def find_events_since(conn, start_date):

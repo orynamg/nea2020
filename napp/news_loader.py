@@ -19,7 +19,9 @@ def news_from_api(api_news):
 
 def match_event(conn, news, events, classifier):
     keywords = classifier.get_named_entities(news.headline)
-    event = next((ev for ev in events if keywords.isubset(existing_event.keywords)), None)
+    if not keywords:
+        return
+    event = next((ev for ev in events if keywords.issubset(ev.keywords)), None)
     if event:
         news.event_id = event.id
         print(f'{datetime.now()} Exisitng event {event.name} matches news keywords: {keywords}')

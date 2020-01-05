@@ -102,7 +102,7 @@ def process_trend(conn, api, classifier, trend, events):
 
         for tweet in tweets:
             tweet.event_id = event.id
-            tweet.category_id = classifier.predict(tweet.text)
+            tweet.category_id = classifier.predict_category(tweet.text)
             with conn:
                 db.save_tweet(conn, tweet)
                 #print(f'{trend.name} tweet saved: {tweet.text}')

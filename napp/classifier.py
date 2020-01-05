@@ -22,7 +22,7 @@ class Classifier:
         self.env_terms = self.load_terms('model/env_terms.csv', lambda row: row[1])
         self.lgbt_terms = self.load_terms('model/lgbt_terms.csv', lambda row: row[0])
         self.youth_terms = self.load_terms('model/youth_terms.csv', lambda row: row[0])
-        self.nlp = spacy.load("en_core_web_sm")
+        self.nlp = spacy.load("en_core_web_md")
 
     def load_terms(self, filename, extract):
         terms = set()
