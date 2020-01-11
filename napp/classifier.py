@@ -7,13 +7,13 @@ from newsapi import NewsApiClient
 
 Categories = ['business', 'entertainment', 'health', 'tech & science', 'environment', 'lgbt', 'youth']
 
-def normalize_text(s):
-    s = s.lower()
+def clean_text(s):
+    return(remove_extra_space(s.lower()))
+
+def remove_extra_space(s):
     s = re.sub(r'\s\W',' ',s)
     s = re.sub(r'\W\s',' ',s)
-    s = re.sub(r'\s+',' ',s)
-    
-    return s
+    return re.sub(r'\s+',' ',s)
 
 class Classifier:
     def __init__(self, model_filename='model/nb.model', vectoriser_filename='model/nb.vectorizer'):
@@ -34,7 +34,7 @@ class Classifier:
         return terms 
 
     def predict_category(self, text):
-        normalised = [normalize_text(text)]
+        normalised = [clean_text(text)]
         x = self.vectoriser.transform(normalised)
         y = self.model.predict(x)
         if self.match(text, self.env_terms):
@@ -47,7 +47,7 @@ class Classifier:
         return int(y[0])
 
     def match(self, text, terms):
-        words = normalize_text(text).split(' ')
+        words = clean_text(text).split(' ')
         twograms = [words[i] + ' ' + words[i+1] for i in range(len(words)-1)]
         threegrams = [words[i] + ' ' + words[i+1] + ' ' + words[i+2] for i in range(len(words)-2)]
         words.extend(twograms)
@@ -62,10 +62,21 @@ class Classifier:
         doc = self.nlp(text)
         return set(ent.text.lower() for ent in doc.ents 
             if ent.label_ not in ['DATE','TIME','PERCENT','MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'])
+    
+    def get_keywords(self, text):
+        text = remove_extra_space(text)
+        words = text.split(' ')
+        # leave only those that start with a capital letter (presumably the most meaninful)
+        words = [w for w in words if w[0] == w[0].upper()]
+        return words
+
 
 def main():
     classifier = Classifier()
-    #print(model.predict('Apple arcade goes live for iOS 13 beta testers - The Verge'))
+    #print(model.predict_category('Apple arcade goes live for iOS 13 beta testers - The Verge'))
+    #print(classifier.get_named_entities('Sir Rod  Stewart  charged over Florida hotel \'punch\''))
+    print(classifier.get_keywords('Sir Rod  Stewart  charged over Florida hotel \'punch\''))
+    return
     
     newsapi = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
     response = newsapi.get_top_headlines(language='en', country='gb')
@@ -79,4 +90,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main() 

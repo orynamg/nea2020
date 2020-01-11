@@ -5,7 +5,7 @@ import sqlite3
 import twitter
 import time
 from datetime import datetime, date, timedelta
-from classifier import Classifier, normalize_text
+from classifier import Classifier
 import database as db
 from models import *
 

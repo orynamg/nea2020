@@ -19,9 +19,19 @@ def news_from_api(api_news):
 
 def match_event(conn, news, events, classifier):
     keywords = classifier.get_named_entities(news.headline)
-    if not keywords:
-        return
-    event = next((ev for ev in events if keywords.issubset(ev.keywords)), None)
+    event = None
+    if keywords:
+        event = next((ev for ev in events if keywords.issubset(ev.keywords)), None)
+    if not event:
+        if not keywords:
+            keywords = classifier.get_keywords(news.headline)
+        generated_name = ' '.join(list(keywords)[:5])
+        keywords = set(k.lower() for k in keywords) # convert to lowercase
+        with conn:
+            event = db.save_event(conn, Event(name=generated_name, keywords=keywords))
+            assert event.id
+            print(f'Inserted event {event.name} with id {event.id}, keywords: {keywords}')
+
     if event:
         news.event_id = event.id
         print(f'{datetime.now()} Exisitng event {event.name} matches news keywords: {keywords}')
