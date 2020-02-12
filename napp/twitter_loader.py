@@ -9,7 +9,7 @@ from classifier import Classifier
 import database as db
 from models import *
 
-MIN_KEYWORDS_COUNT = 5
+MIN_KEYWORDS_COUNT = 4
 
 woeid = {
     "gb": 23424975,

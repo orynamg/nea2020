@@ -60,8 +60,11 @@ class Classifier:
     
     def get_named_entities(self, text):
         doc = self.nlp(text)
-        return set(ent.text.lower() for ent in doc.ents 
+        keywords = set(ent.text.lower() for ent in doc.ents 
             if ent.label_ not in ['DATE','TIME','PERCENT','MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL'])
+        if "coronavirus" in text.lower(): 
+            keywords.add('coronavirus') 
+        return keywords
     
     def get_keywords(self, text):
         text = remove_extra_space(text)
