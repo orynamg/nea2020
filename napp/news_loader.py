@@ -20,9 +20,12 @@ def news_from_api(api_news):
 def match_event(conn, news, events, classifier):
     event = None
 
-    keywords = classifier.get_named_entities(news.headline)
+    position = news.headline.find(" - ")
+    headline = news.headline[:position if position else len(news.headline)]
+
+    keywords = classifier.get_named_entities(headline)
     if not keywords:
-            keywords = news.headline.split(" ")
+            keywords = headline.split(" ")
 
     event = next((ev for ev in events if any(keyword in ev.keywords for keyword in keywords)), None)
 
