@@ -1,12 +1,14 @@
 import os
 import sqlite3
 import time
-import config
 from datetime import datetime, date, timedelta
 from newsapi import NewsApiClient
-import database as db
+from database import NappDatabase
 from models import News, Event
 from classifier import Classifier, Categories
+
+COUNTRY_CODE = 'gb'
+PAUSE_SEC = 30
 
 
 def news_from_api(api_news):
@@ -17,7 +19,7 @@ def news_from_api(api_news):
     )
 
 
-def match_event(conn, news, events, classifier):
+def match_event(news, events, classifier):
     event = None
 
     position = news.headline.find(" - ")
@@ -25,26 +27,29 @@ def match_event(conn, news, events, classifier):
 
     keywords = classifier.get_named_entities(headline)
     if not keywords:
-            keywords = headline.split(" ")
+        keywords = headline.split(" ")
 
     event = next((ev for ev in events if any(keyword in ev.keywords for keyword in keywords)), None)
 
     if event:
         print(f'{datetime.now()} Exisitng event {event.name} matches news keywords: {keywords}')
+        new_keywords = keywords.difference(event.keywords)
+        if new_keywords:
+            event.name = event.name + ' ' + ' '.join(list(new_keywords)[:3])       
+        new_keywords = keywords.union(event.keywords)
+        event.keywords = new_keywords
     else:
         generated_name = ' '.join(list(keywords)[:10])
         keywords = set(k.lower() for k in keywords) # convert to lowercase
-        with conn:
-            event = db.save_event(conn, Event(name=generated_name, keywords=keywords))
-            assert event.id
-            print(f'Inserted event {event.name} with id {event.id}, keywords: {keywords}')
+        event = Event(name=generated_name, keywords=keywords)
+        print(f'Create event: {event.name}, keywords: {event.keywords}')
 
-    news.event_id = event.id
+    return event
 
 
-def load_news(conn, api, classifier):
+def load_news(db, news_api, classifier):
     # load news headlines from newsapi.org
-    response = api.get_top_headlines(language='en', country=config.country_code)
+    response = news_api.get_top_headlines(language='en', country=COUNTRY_CODE)
     news_list = [news_from_api(obj) for obj in response['articles']]
     print(f'{datetime.now()} Loaded {len(news_list)} news headlines')
 
@@ -53,44 +58,46 @@ def load_news(conn, api, classifier):
 
     for news in news_list:
         # skip duplicates
-        if db.find_news_headline(conn, news.headline):
+        if db.find_news_headline(news.headline):
             print(f'{datetime.now()} Not saved. Duplicate news found in the database: {news.headline}')
             continue
 
-        news.country_code = config.country_code
+        news.country_code = COUNTRY_CODE
         news.category_id = classifier.predict_category(news.headline)
 
         # load latest events
-        events = list(db.find_events_since(conn, start_date))
+        events = list(db.find_events_since(start_date))
         print(f'{datetime.now()} Loaded {len(events)} existing recent events')
 
-        match_event(conn, news, events, classifier)
+        event = match_event(news, events, classifier)
+        assert event
+        event = db.save_event(event)
+        assert event.id
+        print(f'Saved event id: {event.id} name: {event.name} , keywords: {event.keywords}')
 
-        with conn:
-            news = db.save_news(conn, news)
-            print(f'{datetime.now()} {Categories[news.category_id]:<14} {news.id:>4} {news.headline}')
+        news.event_id = event.id
+        news = db.save_news(news)
+        print(f'{datetime.now()} {Categories[news.category_id]:<14} {news.id:>4} {news.headline}')
 
             
-
-
 def main():
     conn = sqlite3.connect('database/napp.db', 
                 detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+    
+    db = NappDatabase(conn)
                 
-    api = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
+    news_api = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
 
     classifier = Classifier()
 
-    with conn:
-        db.create_database(conn)
-
     while True:
-        load_news(conn, api, classifier)
+        load_news(db, news_api, classifier)
         print('Pausing...')
-        time.sleep(config.news_loader_sleep_sec)
+        time.sleep(PAUSE_SEC)
 
     if conn:
         conn.close()
+
 
 if __name__ == "__main__":
    try:

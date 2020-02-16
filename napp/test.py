@@ -1,11 +1,19 @@
-import spacy
+import models
+import news_loader
 
-nlp = spacy.load("en_core_web_sm")
+class MockClassifier:
+    def __init__(self, named_entitiles=None):
+        self.named_entitiles = named_entitiles
 
-s = "Apple is looking at buying U.K. startup for $1 billion"
-s = "breaking president trump’s 200 billion in sanctions on iran has wiped Obama’s 150 billion gift to the country"
-# s = s.lower()
+    def get_named_entities(self, text):
+        return self.named_entitiles
 
-doc = nlp(s)
-for ent in doc.ents:
-    print(ent.text, ent.start_char, ent.end_char, ent.label_)
+
+def test_match_event_for_news():
+    news = models.News(headline="Donald Trump")
+    classifier = MockClassifier(named_entitiles=['Donald', 'Trump'])
+    events = [models.Event(id=1, keywords={'Trump'})]
+
+    event = news_loader.match_event(news, events, classifier)
+    assert event == events[0]
+

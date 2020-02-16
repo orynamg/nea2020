@@ -1,4 +1,3 @@
-import config
 import os
 import traceback
 import sqlite3
@@ -6,10 +5,12 @@ import twitter
 import time
 from datetime import datetime, date, timedelta
 from classifier import Classifier
-import database as db
+from database import NappDatabase
 from models import *
 
-MIN_KEYWORDS_COUNT = 4
+MIN_KEYWORDS_COUNT = 5
+COUNTRY_CODE = 'gb'
+PAUSE_SEC = 60
 
 woeid = {
     "gb": 23424975,
@@ -44,68 +45,68 @@ def tweet_from_api(api_tweet):
     )
 
 
-def match_event(conn, trend, keywords, events):
+def match_event(trend, keywords, events):
     """ Match existing or create new event based on twitter trend. """
 
-    # search for an exising event that matches exactly by name
-    event = None # next((ev for ev in events if ev.name == trend.name), None)
-    if event:
-        print(f'Found exisitng event {event.name} by exact trend name')
-    else:
-        # search for an exising event with similar keywords
-        max_similarity = 0
-        for existing_event in events:
-            similarity = len(existing_event.keywords.intersection(keywords))
-            if similarity > max_similarity:
-                max_similarity = similarity
-                if max_similarity >= MIN_KEYWORDS_COUNT:
-                    event = existing_event
-        if event:
-            print(f'Found exisitng event {event.name} by matching {max_similarity} keywords')
+    event = None
+
+    # search for an exising event with similar keywords
+    max_similarity = 0
+    for existing_event in events:
+        similarity = len(existing_event.keywords.intersection(keywords))
+        if similarity > max_similarity:
+            max_similarity = similarity
+            if max_similarity >= MIN_KEYWORDS_COUNT:
+                event = existing_event
 
     if event:
-        # update event if new keywords are found
+        print(f'Found exisitng event {event.name} by matching {max_similarity} keywords')
+
+    if event:
+        # update event name
+        event.name = event.name + ' ' + trend.name 
+        # and keywords if new keywords are found
         new_keywords = keywords.union(event.keywords)
         if len(new_keywords) > len(event.keywords):
             event.keywords = new_keywords
-            with conn:
-                db.save_event(conn, event)
-            print(f'Updated event {event.name} with id {event.id}, keywords: {new_keywords}')
     else:
-        # create event from this trend if no existing events matches 
-        with conn:
-            event = db.save_event(conn, Event(name=trend.name, keywords=keywords))
-            assert event.id
-        print(f'Inserted event {event.name} with id {event.id}, keywords: {keywords}')
-
+        # create event from this trend if no existing events matches
+        event = Event(name=trend.name, keywords=keywords)
+        print(f'Create event: {event.name}, keywords: {keywords}')
 
     return event
 
 
-def process_trend(conn, api, classifier, trend, events):
+def process_trend(db, api, classifier, trend):
     try: 
-        # load popular tweets
+        # load recent events from database (added in the last 3 days)
+        start_date = date.today() - timedelta(days=3)
+        events = list(db.find_events_since(start_date))
+        print(f'Loaded {len(events)} existing recent events')
+
+        # load popular tweets of the trend
         tweets = [tweet_from_api(t) for t in get_popular_tweets(api, trend.query)]
         print(f'Loaded {len(tweets)} tweets')
         if not tweets:
             return
 
-        # form tweets keywords
+        # form trend keywords
         keywords = get_keywords(tweets, classifier)
         print(f'Formed {len(keywords)} keywords')
         if len(keywords) < MIN_KEYWORDS_COUNT:
             return
 
-        event = match_event(conn, trend, keywords, events)
+        event = match_event(trend, keywords, events)
         assert event
+        event = db.save_event(event)
         assert event.id
+        print(f'Saved event id: {event.id} name: {event.name} , keywords: {event.keywords}')
 
         for tweet in tweets:
             tweet.event_id = event.id
             tweet.category_id = classifier.predict_category(tweet.text)
-            with conn:
-                db.save_tweet(conn, tweet)
-                #print(f'{trend.name} tweet saved: {tweet.text}')
+            db.save_tweet(tweet)
+            #print(f'{trend.name} tweet saved: {tweet.text}')
         
         if not any(ev for ev in events if ev.id == event.id):
             events.append(event)
@@ -119,14 +120,7 @@ def main():
     conn = sqlite3.connect('database/napp.db', 
             detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
 
-    # create database if does not exist
-    with conn:
-        db.create_database(conn)
-
-    # load recent events from database (added in the lase 3 days)
-    start_date = date.today() - timedelta(days=3)
-    events = list(db.find_events_since(conn, start_date))
-    print(f'Loaded {len(events)} existing recent events')
+    db = NappDatabase(conn)
 
     # load NLP classifier
     classifier = Classifier()
@@ -139,22 +133,22 @@ def main():
 
     while True:
         # query regional trends from twitter
-        trends = list(api.GetTrendsWoeid(woeid[config.country_code]))
+        trends = list(api.GetTrendsWoeid(woeid[COUNTRY_CODE]))
 
         for trend in trends:
             print(f'Processing twitter trend: {trend.name}')
-            process_trend(conn, api, classifier, trend, events)
+            process_trend(db, api, classifier, trend)
 
         # wait some time then repeat
         print(f'Pausing...')
-        time.sleep(60) 
+        time.sleep(PAUSE_SEC) 
 
     if conn:
         conn.close()
 
 
 if __name__ == "__main__":
-   try:
-       main()
-   except KeyboardInterrupt:
+    try:
+        main()
+    except KeyboardInterrupt:
         print(' Exiting...')
