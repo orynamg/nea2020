@@ -2,21 +2,14 @@ import os
 import sqlite3
 import time
 from datetime import datetime, date, timedelta
-from newsapi import NewsApiClient
 from database import NappDatabase
 from models import News, Event
 from classifier import Classifier, Categories
+from newsapi_source import NewsApiSource
+from eventregistry_source import EventRegistrySource
 
 COUNTRY_CODE = 'gb'
 PAUSE_SEC = 30
-
-
-def news_from_api(api_news):
-    return News(
-        headline = api_news['title'],
-        source = api_news['source']['name'],
-        url = api_news['url']
-    )
 
 
 def match_event(news, events, classifier):
@@ -27,7 +20,7 @@ def match_event(news, events, classifier):
 
     keywords = classifier.get_named_entities(headline)
     if not keywords:
-        keywords = headline.split(" ")
+        keywords = set(headline.split(" "))
 
     event = next((ev for ev in events if any(keyword in ev.keywords for keyword in keywords)), None)
 
@@ -47,12 +40,7 @@ def match_event(news, events, classifier):
     return event
 
 
-def load_news(db, news_api, classifier):
-    # load news headlines from newsapi.org
-    response = news_api.get_top_headlines(language='en', country=COUNTRY_CODE)
-    news_list = [news_from_api(obj) for obj in response['articles']]
-    print(f'{datetime.now()} Loaded {len(news_list)} news headlines')
-
+def process_news(db, news_list, classifier):
     # load recent events from database (added in the lase 3 days)
     start_date = date.today() - timedelta(days=3)   
 
@@ -76,22 +64,53 @@ def load_news(db, news_api, classifier):
         print(f'Saved event id: {event.id} name: {event.name} , keywords: {event.keywords}')
 
         news.event_id = event.id
+
+        # TODO: summary here
+        if news.text:
+            news.summary = news.text[:300]
+
         news = db.save_news(news)
         print(f'{datetime.now()} {Categories[news.category_id]:<14} {news.id:>4} {news.headline}')
 
-            
+
+def load_news(sources, action):
+    # dictionary maps url to news to avoid duplicates from different sources
+    news_list = {}
+    for source in sources:
+        news = action(source)
+        print(f'{datetime.now()} Loaded {len(news)} news from {source}')
+        news_list.update({n.url:n for n in news})
+
+    return news_list.values()
+
+
 def main():
-    conn = sqlite3.connect('database/napp.db', 
-                detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
-    
+    conn = sqlite3.connect('database/napp.db', detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
     db = NappDatabase(conn)
-                
-    news_api = NewsApiClient(api_key=os.environ['NEWSAPI_KEY'])
 
     classifier = Classifier()
 
+    newsapi_org = NewsApiSource(
+                api_key=os.getenv('NEWSAPI_KEY'), 
+                record_response_file='tests/data/newsapi.json'
+    )
+    event_registry_api = EventRegistrySource(
+                api_key=os.getenv('EVENT_REGISTRY_KEY'),
+                record_response_file='tests/data/event_registry_org3.json',
+                max_items=100
+    )
+
     while True:
-        load_news(db, news_api, classifier)
+        news_list = load_news(
+            sources=[
+                # newsapi_org,
+                event_registry_api
+            ],
+            # action=lambda source: source.load_news(language='en', country=COUNTRY_CODE)
+            action=lambda source: source.load_news_from_file()
+        )
+        process_news(db, news_list, classifier)
+
         print('Pausing...')
         time.sleep(PAUSE_SEC)
 

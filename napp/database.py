@@ -1,6 +1,12 @@
 import sqlite3
 from classifier import Categories
 from models import *
+from dateutil import parser
+
+def _sqlite_convert_timestamp(val):
+    return parser.isoparse(val)
+
+sqlite3.register_converter("timestamp", _sqlite_convert_timestamp)
 
 class NappDatabase:
 
@@ -14,15 +20,15 @@ class NappDatabase:
         create_category_table = """
         CREATE TABLE IF NOT EXISTS Category(
             CategoryID INTEGER PRIMARY KEY,
-            Name VARCHAR NOT NULL
+            Name TEXT NOT NULL
         );
         """
         create_event_table = """
         CREATE TABLE IF NOT EXISTS Event(
             EventID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Name VARCHAR NOT NULL UNIQUE,
-            Summary VARCHAR,
-            Keywords VARCHAR,
+            Name TEXT NOT NULL UNIQUE,
+            Summary TEXT,
+            Keywords TEXT,
             CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
@@ -30,14 +36,16 @@ class NappDatabase:
         create_news_table = """
             CREATE TABLE IF NOT EXISTS News(
                 NewsID INTEGER PRIMARY KEY AUTOINCREMENT,
-                Headline VARCHAR NOT NULL UNIQUE,
-                Source VARCHAR NOT NULL, 
-                URL VARCHAR NOT NULL,
+                Headline TEXT NOT NULL UNIQUE,
+                Source TEXT NOT NULL, 
+                URL TEXT NOT NULL,
+                ImageURL TEXT,
                 CountryCode CHAR(3) NOT NULL,
                 CategoryID INTEGER, 
                 EventID INTEGER,
-                Text VARCHAR,
-                ScrapedAt TIMESTAMP,
+                Text TEXT,
+                Summary TEXT,
+                PublishedAt TIMESTAMP,
                 CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(CategoryID) REFERENCES Category(CategoryID), 
             FOREIGN KEY(EventID) REFERENCES Event(EventID)
@@ -47,10 +55,10 @@ class NappDatabase:
         create_tweet_table = """
         CREATE TABLE IF NOT EXISTS Tweet(
             TweetID INTEGER PRIMARY KEY AUTOINCREMENT,
-            Text VARCHAR NOT NULL,
-            Hashtags VARCHAR NOT NULL,
-            User VARCHAR NOT NULL,
-            URL VARCHAR,
+            Text TEXT NOT NULL,
+            Hashtags TEXT NOT NULL,
+            User TEXT NOT NULL,
+            URL TEXT,
             CategoryID INTEGER, 
             EventID INTEGER,
             PublishedAt TIMESTAMP NOT NULL,
@@ -70,12 +78,12 @@ class NappDatabase:
 
 
     def save_news(self, news):
-        sql = """ INSERT OR REPLACE INTO News(Headline, Source, URL, CountryCode, CategoryID, EventID, Text, ScrapedAt)
-                VALUES(?,?,?,?,?,?,?,?); """
+        sql = """ INSERT OR REPLACE INTO News(Headline, Source, URL, ImageURL, CountryCode, CategoryID, EventID, Text, Summary, PublishedAt)
+                VALUES(?,?,?,?,?,?,?,?,?,?); """
         
         cur = self.conn.cursor()
-        cur.execute(sql, (news.headline, news.source, news.url, news.country_code, 
-                            news.category_id, news.event_id, news.text, news.scraped_at))
+        cur.execute(sql, (news.headline, news.source, news.url, news.image_url, news.country_code, 
+                            news.category_id, news.event_id, news.text, news.summary, news.published_at))
         
         return self.find_news_headline(news.headline)
 
@@ -86,12 +94,14 @@ class NappDatabase:
             headline = row[1],
             source = row[2],
             url = row[3],
-            country_code = row[4],
-            category_id = row[5],
-            event_id = row[6],
-            text = row[7],
-            scraped_at = row[8],
-            created_at = row[9]
+            image_url = row[4],
+            country_code = row[5],
+            category_id = row[6],
+            event_id = row[7],
+            text = row[8],
+            summary = row[9],
+            published_at = row[10],
+            created_at = row[11],
         )
 
 

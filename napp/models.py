@@ -29,10 +29,12 @@ class News:
     headline: str = ""
     source: str = ""
     url: str = ""
+    image_url: str = ""
     country_code: str = ""
     category_id: Union[int, None] = None
     event_id: Union[int, None] = None
     text: str = ""
-    scraped_at: Union[datetime, None] = None
+    summary: str = ""
+    published_at: datetime = datetime.utcnow()
     created_at: datetime = datetime.utcnow()
 

@@ -1,4 +1,5 @@
 import os
+import json
 import traceback
 import sqlite3
 import twitter
@@ -17,9 +18,18 @@ woeid = {
     "us": 23424977
 }
 
+count = 0
+
 def get_popular_tweets(api, keyword):
     query = "q={}&result_type=popular&count=100&lang=en"
     results = api.GetSearch(raw_query=query.format(keyword))
+
+    # global count
+    # with open(f'twitter_trend_{count}.json', 'w') as f:
+    #     l = [json.loads(i.AsJsonString()) for i in results]
+    #     json.dump(l, f, indent=2)
+    #     count += 1
+
     return results
 
 
@@ -134,6 +144,10 @@ def main():
     while True:
         # query regional trends from twitter
         trends = list(api.GetTrendsWoeid(woeid[COUNTRY_CODE]))
+
+        # with open('twitter_trends.json', 'w') as f:
+        #     l = [json.loads(i.AsJsonString()) for i in trends]
+        #     json.dump(l, f, indent=2)
 
         for trend in trends:
             print(f'Processing twitter trend: {trend.name}')
