@@ -97,7 +97,7 @@ def main():
     event_registry_api = EventRegistrySource(
                 api_key=os.getenv('EVENT_REGISTRY_KEY'),
                 record_response_file='tests/data/event_registry_org3.json',
-                max_items=100
+                max_items=30
     )
 
     while True:
