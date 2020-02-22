@@ -67,7 +67,7 @@ def process_news(db, news_list, classifier):
 
         # TODO: summary here
         if news.text:
-            news.summary = news.text[:300]
+            news.summary = classifier.make_summary(news.text)[:500]
 
         news = db.save_news(news)
         print(f'{datetime.now()} {Categories[news.category_id]:<14} {news.id:>4} {news.headline}')
